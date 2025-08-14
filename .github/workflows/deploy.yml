@@ -5,7 +5,7 @@ on:
     branches:
       - master
 env:
-  IMAGE_NAME: jaisenbe58r/iaapi
+  IMAGE_NAME: eddymena19/iaapi
 
 jobs:
   build:
@@ -48,9 +48,13 @@ jobs:
           echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add - > /dev/null
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
+
           ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" $SSH_USER@$SSH_HOST "
             export DB_HOST=${DB_HOST}
             export DB_PORT=${DB_PORT}
+            export DB_CONNECTION=${DB_CONNECTION}
+            export SECRET_KEY=${SECRET_KEY}
+            
             cd /var/www/iaapi && \
             git pull && \
             (docker stack rm iaapi-services || true) && \
