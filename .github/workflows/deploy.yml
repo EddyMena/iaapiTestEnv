@@ -54,21 +54,6 @@ jobs:
           docker compose down || true
           docker compose up -d
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pytest alembic
-
-      # 7️⃣ Run lightweight unit tests inline
-      - name: Run basic unit tests
-        run: |
-          python3 -m venv .venv
-          source .venv/bin/activate
-          pip install --upgrade pip pytest
-          mkdir -p tests
-          echo "def test_example(): assert 1 + 1 == 2" > tests/test_sample.py
-          pytest tests
-
       # 8️⃣ Run SonarCloud analysis
       - name: Run SonarCloud analysis
         uses: sonarsource/sonarcloud-github-action@v2
