@@ -86,4 +86,3 @@ jobs:
             docker stack ls
             docker service ls
             docker container ls
-EOF
