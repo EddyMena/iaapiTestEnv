@@ -21,9 +21,13 @@ jobs:
           java-version: 17
 
       # 3️⃣ Ejecutar SonarCloud Action
-      - name: Run SonarCloud Analysis
+      - name: Run SonarCloud analysis
         uses: sonarsource/sonarcloud-github-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          projectKey: your_project_key_here
-          organization: your_organization_key_here
-          token: ${{ secrets.SONAR_TOKEN }}
+          projectBaseDir: .
+          args: >
+            -Dsonar.projectKey=EddyMena_iaapiTestEnv
+            -Dsonar.organization=eddymena19
+            -Dsonar.host.url=https://sonarcloud.io
