@@ -7,7 +7,12 @@ WORKDIR /app
 
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends netcat && \
+    apt-get install -y --no-install-recommends \
+        netcat \
+        build-essential \
+        libffi-dev \
+        libssl-dev \
+        python3-dev && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 COPY poetry.lock pyproject.toml ./
