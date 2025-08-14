@@ -3,8 +3,8 @@ set -ex
 
 arg="$1"
 
-HOST="${arg%%:*}"
-PORT="${arg#*:}"
+HOST="${DB_HOST:-db}"
+PORT="${DB_PORT:-5432}"
 
 until nc -w 1 -z ${HOST} ${PORT}; do
   >&2 echo "Postgres is unavailable - sleeping"

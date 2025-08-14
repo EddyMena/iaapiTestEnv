@@ -6,18 +6,23 @@ on:
       - master
 env:
   IMAGE_NAME: jaisenbe58r/iaapi
-  DOCKER_USER: ${{ secrets.DOCKER_USER }}
-  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
 jobs:
   build:
     name: Build Container
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-      - name: Build image and publish to registry
+      - uses: actions/checkout@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker image
         run: |
           docker build -t $IMAGE_NAME:latest .
-          echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin
           docker push $IMAGE_NAME:latest
 
   deploy:
@@ -31,6 +36,8 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
           DB_CONNECTION: ${{ secrets.DB_CONNECTION }}
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
         run: |
