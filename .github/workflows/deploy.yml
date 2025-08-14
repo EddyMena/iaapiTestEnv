@@ -1,4 +1,4 @@
-name: Deploy
+name: Build and Deploy Local Docker
 
 on:
   push:
@@ -9,11 +9,13 @@ env:
   IMAGE_NAME: eddymena19/iaapi
 
 jobs:
-  build:
-    name: Build and Push Docker Image
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
@@ -21,69 +23,17 @@ jobs:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and Push Docker image
+      - name: Build Docker image
         run: |
           echo "Building Docker image..."
           docker build -t $IMAGE_NAME:latest .
-          docker push $IMAGE_NAME:latest
 
-  deploy:
-    name: Deploy to Gitpod
-    runs-on: ubuntu-latest
-    environment: login  # Aquí usamos tu environm
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Install SSH client
+      - name: Run Docker Compose
         run: |
-          which ssh-agent || (sudo apt-get update -y && sudo apt-get install -y openssh-client)
+          echo "Starting services with Docker Compose..."
+          docker-compose down || true
+          docker-compose up -d
 
-      - name: Start ssh-agent and add key
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: List running containers
         run: |
-          eval "$(ssh-agent -s)"
-          echo "Adding SSH private key..."
-          echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-
-      - name: Deploy service on Gitpod
-        env:
-          SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_PORT: ${{ secrets.SSH_PORT }}
-          DB_HOST: ${{ secrets.DB_HOST }}
-          DB_PORT: ${{ secrets.DB_PORT }}
-          DB_CONNECTION: ${{ secrets.DB_CONNECTION }}
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-        run: |
-          echo "Connecting to Gitpod workspace..."
-          ssh -p $SSH_PORT -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" $SSH_USER@$SSH_HOST << EOF
-            set -e
-            export DB_HOST=$DB_HOST
-            export DB_PORT=$DB_PORT
-            export DB_CONNECTION=$DB_CONNECTION
-            export SECRET_KEY=$SECRET_KEY
-
-            cd /workspace/iaapi || exit 1
-
-            echo "Pulling latest changes..."
-            git pull
-
-            echo "Removing previous Docker stack (if exists)..."
-            docker stack rm iaapi-services || true
-            docker swarm leave --force || true
-
-            echo "Initializing Docker Swarm..."
-            docker swrm init --advertise-addr 127.0.0.1
-
-            echo "Deploying stack..."
-            docker stack deploy -c docker-compose.yml iaapi-services
-
-            echo "Listing stacks, services, and containers..."
-            docker stack ls
-            docker service ls
-            docker container ls
-          EOF
+          docker ps
