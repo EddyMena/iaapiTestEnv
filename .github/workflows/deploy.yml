@@ -77,7 +77,7 @@ jobs:
             docker swarm leave --force || true
 
             echo "Initializing Docker Swarm..."
-            docker swarm init --advertise-addr 127.0.0.1
+            docker swrm init --advertise-addr 127.0.0.1
 
             echo "Deploying stack..."
             docker stack deploy -c docker-compose.yml iaapi-services
@@ -86,3 +86,4 @@ jobs:
             docker stack ls
             docker service ls
             docker container ls
+          EOF
