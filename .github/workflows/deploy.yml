@@ -30,6 +30,7 @@ jobs:
   deploy:
     name: Deploy to Gitpod
     runs-on: ubuntu-latest
+    environment: login
     needs: build
     steps:
       - uses: actions/checkout@v3
