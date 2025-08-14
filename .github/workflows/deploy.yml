@@ -1,4 +1,4 @@
-name: Build and Deploy Local Docker
+name: Build, Test and Deploy Local Docker
 
 on:
   push:
@@ -12,28 +12,54 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
+      # 1️⃣ Clonar el repositorio
       - uses: actions/checkout@v3
 
+      # 2️⃣ Configurar Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
+      # 3️⃣ Login en Docker Hub
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      # 4️⃣ Build de la imagen
       - name: Build Docker image
         run: |
           echo "Building Docker image..."
           docker build -t $IMAGE_NAME:latest .
 
+      # 5️⃣ Pruebas unitarias básicas en Python
+      - name: Run basic Python test
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          pip install pytest
+          echo "def test_example(): assert 1 + 1 == 2" > test_sample.py
+          pytest
+
+      # 6️⃣ Análisis de código con SonarCloud
+      - name: Run SonarCloud analysis
+        uses: sonarsource/sonarcloud-github-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          projectBaseDir: .
+          args: >
+            -Dsonar.projectKey=EddyMena_iaapiTestEnv
+            -Dsonar.organization=eddymena19
+            -Dsonar.host.url=https://sonarcloud.io
+
+      # 7️⃣ Ejecutar Docker Compose para levantar servicios
       - name: Run Docker Compose
         run: |
           echo "Starting services with Docker Compose..."
-          docker-compose down || true
-          docker-compose up -d
+          docker compose down || true
+          docker compose up -d
 
+      # 8️⃣ Listar contenedores activos
       - name: List running containers
-        run: |
-          docker ps
+        run: docker ps
