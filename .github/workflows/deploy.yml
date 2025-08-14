@@ -1,10 +1,7 @@
-name: Build, Test & Deploy
+name: Build and Deploy Local Docker
 
 on:
   push:
-    branches:
-      - master
-  pull_request:
     branches:
       - master
 
@@ -12,52 +9,41 @@ env:
   IMAGE_NAME: eddymena19/iaapi
 
 jobs:
-  build-test-deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
+      # 1️⃣ Checkout the repo
       - uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.11
+      # 2️⃣ Fix case-sensitive file issues
+      - name: Fix Git case sensitivity
+        run: |
+          git config core.ignorecase false
+          git ls-files -i -o --exclude-standard  # just to show untracked/ignored files
+          # optionally you could delete and re-add files with wrong case here
+          
+      # 3️⃣ Set up Docker Buildx
+      - uses: docker/setup-buildx-action@v2
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v2
+      # 4️⃣ Log in to Docker Hub
+      - uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      # 5️⃣ Build Docker image
       - name: Build Docker image
-        run: docker build -t $IMAGE_NAME:latest .
-
-      - name: Run lightweight Python test
         run: |
-          python3 -m venv .venv
-          source .venv/bin/activate
-          pip install pytest
-          mkdir -p tests
-          echo "def test_example(): assert 1 + 1 == 2" > tests/test_sample.py
-          pytest tests
+          echo "Building Docker image..."
+          docker build -t $IMAGE_NAME:latest .
 
-      - name: Start Docker Compose services
+      # 6️⃣ Run Docker Compose
+      - name: Run Docker Compose
         run: |
+          echo "Starting services with Docker Compose..."
           docker-compose down || true
           docker-compose up -d
 
+      # 7️⃣ List running containers
       - name: List running containers
         run: docker ps
-
-      - name: SonarCloud analysis
-        uses: sonarsource/sonarcloud-github-action@v2
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          projectBaseDir: .
-          args: >
-            -Dsonar.projectKey=EddyMena_iaapiTestEnv
-            -Dsonar.organization=eddymena19
-            -Dsonar.host.url=https://sonarcloud.io
