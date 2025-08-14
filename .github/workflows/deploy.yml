@@ -4,14 +4,14 @@ on:
   push:
     branches:
       - master
+
 env:
   IMAGE_NAME: eddymena19/iaapi
 
 jobs:
   build:
-    name: Build Container
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
-    environment: login
     steps:
       - uses: actions/checkout@v3
 
@@ -21,51 +21,69 @@ jobs:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push Docker image
+      - name: Build and Push Docker image
         run: |
+          echo "Building Docker image..."
           docker build -t $IMAGE_NAME:latest .
           docker push $IMAGE_NAME:latest
 
   deploy:
-    name: Deploy
+    name: Deploy to Gitpod
     runs-on: ubuntu-latest
     needs: build
     steps:
       - uses: actions/checkout@v3
-      - name: Deploy service over SSH in Gitpod
+
+      - name: Install SSH client
+        run: |
+          which ssh-agent || (sudo apt-get update -y && sudo apt-get install openssh-client -y)
+
+      - name: Start ssh-agent and add key
         env:
-          SSH_USER: ${{ secrets.SSH_USER }}          # ej. gitpod
-          SSH_HOST: ${{ secrets.SSH_HOST }}          # ej. 3333-eddymena-iaapitestenv-p5z9sa8q0ju.ws-us121.gitpod.io
-          SSH_PORT: 3333
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          eval "$(ssh-agent -s)"
+          echo "Adding SSH private key..."
+          echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+      - name: Deploy service on Gitpod
+        env:
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
           DB_HOST: ${{ secrets.DB_HOST }}
           DB_PORT: ${{ secrets.DB_PORT }}
           DB_CONNECTION: ${{ secrets.DB_CONNECTION }}
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
         run: |
-          # Instalar cliente SSH si no existe
-          which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )
-          eval $(ssh-agent -s)
-          echo "Adding SSH key..."
-          echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add - > /dev/null
+          echo "Connecting to Gitpod workspace..."
+          ssh -p $SSH_PORT -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" $SSH_USER@$SSH_HOST << EOF
+            set -e
+            echo "Exporting environment variables..."
+            export DB_HOST=$DB_HOST
+            export DB_PORT=$DB_PORT
+            export DB_CONNECTION=$DB_CONNECTION
+            export SECRET_KEY=$SECRET_KEY
 
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
+            cd /workspace/iaapi || exit 1
 
-          # Comando SSH ajustado al puerto de Gitpod
-          ssh -p $SSH_PORT -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" $SSH_USER@$SSH_HOST "
-            export DB_HOST=${DB_HOST}
-            export DB_PORT=${DB_PORT}
-            export DB_CONNECTION=${DB_CONNECTION}
-            export SECRET_KEY=${SECRET_KEY}
+            echo "Pulling latest changes..."
+            git pull
 
-            cd /workspace/iaapi && \
-            git pull && \
-            (docker stack rm iaapi-services || true) && \
-            (docker swarm leave --force || true) && \
-            docker swarm init --advertise-addr 127.0.0.1 && \
-            docker stack deploy -c docker-compose.yml iaapi-services && \
-            docker stack ls && \
-            docker service ls && \
+            echo "Removing previous Docker stack (if exists)..."
+            docker stack rm iaapi-services || true
+            docker swarm leave --force || true
+
+            echo "Initializing Docker Swarm..."
+            docker swarm init --advertise-addr 127.0.0.1
+
+            echo "Deploying stack..."
+            docker stack deploy -c docker-compose.yml iaapi-services
+
+            echo "Listing stacks, services, and containers..."
+            docker stack ls
+            docker service ls
             docker container ls
-          "
+EOF
