@@ -44,6 +44,8 @@ jobs:
           echo "SECRET_KEY=$(openssl rand -hex 32)" >> .env
           echo "PROJECT_NAME=iAApiLocal" >> .env
           echo "DEBUG=True" >> .env
+          echo "PGADMIN_DEFAULT_EMAIL=admin@example.com" >> .env
+          echo "PGADMIN_DEFAULT_PASSWORD=admin" >> .env
 
       # 6️⃣ Start Docker Compose services
       - name: Start services with Docker Compose
