@@ -1,0 +1,29 @@
+name: SonarCloud Scan
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  sonarcloud:
+    name: Analyze with SonarCloud
+    runs-on: ubuntu-latest
+    steps:
+      # 1️⃣ Clonar el repositorio
+      - uses: actions/checkout@v3
+
+      # 2️⃣ Configurar Java (SonarScanner necesita Java)
+      - uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # 3️⃣ Ejecutar SonarCloud Action
+      - name: Run SonarCloud Analysis
+        uses: sonarsource/sonarcloud-github-action@v2
+        with:
+          projectKey: your_project_key_here
+          organization: your_organization_key_here
+          token: ${{ secrets.SONAR_TOKEN }}
