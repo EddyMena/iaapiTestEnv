@@ -30,14 +30,14 @@ jobs:
   deploy:
     name: Deploy to Gitpod
     runs-on: ubuntu-latest
-    environment: login
-    needs: build
+    environment: login  # Aquí usamos tu environment
+
     steps:
       - uses: actions/checkout@v3
 
       - name: Install SSH client
         run: |
-          which ssh-agent || (sudo apt-get update -y && sudo apt-get install openssh-client -y)
+          which ssh-agent || (sudo apt-get update -y && sudo apt-get install -y openssh-client)
 
       - name: Start ssh-agent and add key
         env:
@@ -62,7 +62,6 @@ jobs:
           echo "Connecting to Gitpod workspace..."
           ssh -p $SSH_PORT -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" $SSH_USER@$SSH_HOST << EOF
             set -e
-            echo "Exporting environment variables..."
             export DB_HOST=$DB_HOST
             export DB_PORT=$DB_PORT
             export DB_CONNECTION=$DB_CONNECTION
