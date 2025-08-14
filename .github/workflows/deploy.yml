@@ -48,6 +48,8 @@ jobs:
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" $SSH_USER@$SSH_HOST "
+            export DB_HOST=${DB_HOST}
+            export DB_PORT=${DB_PORT}
             cd /var/www/iaapi && \
             git pull && \
             (docker stack rm iaapi-services || true) && \
